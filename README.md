@@ -10,6 +10,8 @@ Unsorted screens, games, fun, code, schematics
 
 ## lower-case characters
 
+![lower-case](assets/img/letters.gif)
+
 ## odometer
 
 ![odometer](assets/img/odometer.gif)
