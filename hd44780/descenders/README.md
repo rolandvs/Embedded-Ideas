@@ -3,6 +3,9 @@
 From Electronic Design, August 5, 1996
 by Jay Sarno, San Diego
 
+![descenders](../assets/img/descenders.png)
+
+
 Many small alphanumeric liquid-crystal displays are controlled by Hitachi's HD44780 integrated circuit. This display controller chip has a built-in character generator that includes lower-case letters.
 Unfortunately, the font is implemented in a 5-by-7 pixel cell with no place for descenders. As a result, the letters `g`, `j`, `p`, `q` and `y` have an awkward apperance. Designers thus are left with either using all upper-case letters for messages (which affects readability and implies "shouting"), accepting  the clumsy built-in lower-case letters, or using the method described here.
 
