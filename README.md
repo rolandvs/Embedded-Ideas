@@ -18,5 +18,4 @@ Unsorted screens, games, fun, code, schematics
 
 # breakout
 
-![bricks](breakout/assets/img/brickles.start.jpeg)
-
+![bricks](breakout/assets/img/brickles_start.jpeg)
