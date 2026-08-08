@@ -3,7 +3,7 @@
 From Electronic Design, August 5, 1996
 by Jay Sarno, San Diego
 
-![descenders](../assets/img/descenders.png)
+![descenders](../assets/img/letters.gif)
 
 
 Many small alphanumeric liquid-crystal displays are controlled by Hitachi's HD44780 integrated circuit. This display controller chip has a built-in character generator that includes lower-case letters.
