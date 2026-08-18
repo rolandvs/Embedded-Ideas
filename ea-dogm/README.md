@@ -22,7 +22,7 @@ For the connection between the display and the my4TH checkout the [wiring diagra
 
 # Forth
 
-The descenders are loaded in CGRAM. The Forth way to do it, is in the listing below. Refer to the complete program [dogm163_descenders.fth](ea-dogm/src/4th/dogm163_descenders.fth) for display initialisation and writing characters on it.
+The descenders are loaded in CGRAM. The Forth way to do it, is in the listing below. Refer to the complete program [dogm163_descenders.fth](src/4th/dogm163_descenders.fth) characters on it.
 
 ```forth
 \ way to access the CGRAM
