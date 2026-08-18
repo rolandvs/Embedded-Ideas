@@ -12,6 +12,8 @@ Unsorted screens, games, fun, code, schematics
 
 ![lower-case](assets/img/letters.gif)
 
+Checkout [HD44780](hd44780/descenders/README.md) and [EA-DOGM-16x](ea-dogm/README.md).
+
 ## odometer
 
 ![odometer](assets/img/odometer.gif)
