@@ -92,7 +92,7 @@ variable pout
                  11 lcd-data 0F lcd-data 01 lcd-data 0E lcd-data ;
 
 \ load all custom characters - call once after lcd-init
-\ cgram survives lcd-cls, but not power-off
+\ cgram survives lcd-cls, but reload after power-off
 : lcd-descenders
     g-desc j-desc p-desc q-desc y-desc
     0 0 lcd-goto ;
