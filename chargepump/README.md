@@ -17,6 +17,8 @@ An old idea of such a charge pump was published way back in EDN on August 1, 199
 
 The old idea was implemented on a 68HC05 by alternating two I/O pins at 500Hz, something that nowadays with complex timers and PWM can be performed without processor intervention or just use a dedicated IC.
 
+![waveform](assets/img/edn_waveform.png)
+
 The nice thing about those "un-regulators" that are driven by a few I/O pins, is the relative simple implementation at almost zero cost.
 
 ```
