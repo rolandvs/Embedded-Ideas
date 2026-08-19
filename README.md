@@ -7,7 +7,7 @@ Unsorted screens, games, fun, code, schematics
 
 # Charge Pumps
 
-Goto the ![charge pump](chargepump/README.md) section.
+Goto the [charge pump](chargepump/README.md) section.
 
 # Disppong
 
