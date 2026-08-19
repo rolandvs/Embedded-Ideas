@@ -78,6 +78,24 @@ variable pout
     2 ms
     06 lcd-cmd  ;          \ entry mode: cursor right
 
+\ position cursor: col 0-15, row 0-2
+\ dogm163 ddram row offsets: 0=$00, 1=$10, 2=$20
+: lcd-goto  ( col row -- )
+    case
+        0 of 00 endof
+        1 of 10 endof
+        2 of 20 endof
+        00 swap
+    endcase
+    + 80 or
+    lcd-cmd ;
+
+\ clear screen
+: lcd-cls
+    38 lcd-cmd             \ function set: 8-bit, table 0
+    01 lcd-cmd              \ clear display
+    2 ms ;
+
 : cg!  ( n -- )  38 lcd-cmd  8 * 40 or lcd-cmd ;
 
 : g-desc  0 cg!  00 lcd-data 00 lcd-data 0F lcd-data 11 lcd-data
@@ -109,31 +127,12 @@ variable pout
     endcase
     lcd-data ;
 
-\ position cursor: col 0-15, row 0-2
-\ dogm163 ddram row offsets: 0=$00, 1=$10, 2=$20
-: lcd-goto  ( col row -- )
-    case
-        0 of 00 endof
-        1 of 10 endof
-        2 of 20 endof
-        00 swap
-    endcase
-    + 80 or
-    lcd-cmd ;
-
-\ clear screen
-: lcd-cls
-    38 lcd-cmd             \ function set: 8-bit, table 0
-    01 lcd-cmd              \ clear display
-    2 ms ;
-
 \ print string (with descenders)
 : lcd-type  ( addr len -- )
     0 do  
         dup c@ lcd-emit  
         char+  
     loop  drop ;
-
 
 \ hello world across all 3 lines
 : myhello
