@@ -12,6 +12,15 @@ The test hardware is a custom CPU and executes native Forth code.
 
 ![my4TH](/ea-dogm/assets/img/dogm_my4TH.png)
 
+One of the bugs in the code were the millisecond delays as the base is hexedecimal 500 ms is not 500ms. So I added some constants to the code
+to make it work. Also how to figure out the current base?
+
+## 10 equals 10
+If you want to find out which base you are using `base @ .` is useless as it prints `10`. So a way to fix this is:
+
+```
+: .base  ( -- )   base @ dup decimal . base ! ; 
+```
 
 ## DOGM Display
 
@@ -19,6 +28,47 @@ The test hardware is a custom CPU and executes native Forth code.
 
 For the connection between the display and the my4TH checkout the [wiring diagram](/ea-dogm/hardware/connect_my4TH.png)
 
+### Using "SPI" 
+The schematics were fine. However, in the latest incarnation of the program a few pins moved. See connector below:
+
+| FUNC        | LABEL| PIN| PIN| LABEL| FUNC    | 
+|-------------|------|----|----|------|---------|
+|             | GND  | 20 | 19 | GND  |         |
+| MOSI/SO     | OUT7 | 18 | 17 | IN7  | SI/MISO |
+| SCLK        | OUT6 | 16 | 15 | IN6  |         |
+| SS_N        | OUT5 | 14 | 13 | IN5  |         |
+| BACKLIGHT_N | OUT4 | 12 | 11 | IN4  |         |
+| RS          | OUT3 | 10 |  9 | IN3  |         |
+|             | OUT2 |  8 |  7 | IN2  |         |
+|             | OUT1 |  6 |  5 | IN1  |         |
+| TRIGGER_N   | OUT0 |  4 |  3 | IN0  |         |
+|             | +5V  |  2 |  1 | RSTN |         |
+
+First a bit-bang function was used to drive the display. It has been replaced by an assembly coded function implementing a SPI like function.
+
+For the purpose of timing a `trigger` output pin is defined that will be activated (low active) during writing to the screen (see `myhello` function).
+
+The measured time where the `trigger` start until it ends is `350ms`. It measures the of three strings written to the display. The debug code added were two fragments:
+
+```
+\ define a GPIO bit for the scope
+1 constant trigger-bit  \ IO PORT bit 0 used to trigger the scope
+
+: trigger-hi  trigger-bit bit-hi ;   
+: trigger-lo  trigger-bit bit-lo ;
+trigger-hi              \ set the output high
+```
+
+```
+\ insert trigger-lo/hi around the block to measure time
+trigger-lo 
+0 0 lcd-goto  S" Welcome"      lcd-type
+0 1 lcd-goto  S" dogm163 5v"   lcd-type
+0 2 lcd-goto  S" My4TH rocks"  lcd-type
+trigger-hi 
+``` 
+
+Using the SPI is roughly 5.5 times faster than the bit-bang version, which takes 1916ms to accomplish the same task.
 
 # Forth
 

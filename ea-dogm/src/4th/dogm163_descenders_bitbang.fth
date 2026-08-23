@@ -1,10 +1,10 @@
 \ My4TH experimental setup
 \ Using the output port to drive a display
+\
 \ The display is an EA DOGM display, which come as
 \ DOGM81, DOGM162 and DOGM163
 \
-\ The code is a SPI serial version which is about 5.5x faster
-\ than the bit-bang version.
+\ The code is a bit-bang SPI serial version which is slow.
 \
 \ This code is an adaption of the dogm163.fth with custom
 \ descenders g j p q y added in CGRAM 0-4
@@ -15,9 +15,9 @@
 \ I/O Connector and PIN usage
 \
 \             GND • • GND
-\    MOSI/SO OUT7 • • IN7 SI/MISO
-\       SCLK OUT6 • • IN6
-\        SSN OUT5 • • IN5
+\         SO OUT7 • • IN7
+\        CLK OUT6 • • IN6
+\        CSN OUT5 • • IN5
 \  BACKLIGHT OUT4 • • IN4
 \         RS OUT3 • • IN3
 \            OUT2 • • IN2
@@ -25,30 +25,12 @@
 \    TRIGGER OUT0 • • IN0
 \             +5V • • RSTN
 \
-\ A bit of fun: base @ . prints 10 either hex or decimal so how to
-\ figure out what base is active? Try this one:
-\   : .base  ( -- )   base @ dup decimal . base ! ;  
 
 hex
 
 \ setting or clearing a bit
 : bit-hi ( mask -- )   rout or  wout ;
 : bit-lo ( mask -- )   invert  rout and wout ;
-
-\ Fast SPI transfer routine for My4TH and My4TH-nfd by D.Kuschel
-\ MISO: Input 7     MOSI: Output 7   (MSB first)
-\ SCLK: Output 6    SSN : Output 5
-base @  hex
-: n, 0 do , loop ;  \ helper word for inline assembler code
-
-: spi-xf ( txb -- rxb )  \ SPI transfer, send and receive 1 byte
-[ 1710 1510 A1C 60E 261C DBF 30E 261C E40 31C 261C C14 B0E B1D
-  1C0B 810 12D 4219 12 n, here 1E - , 2D3C 1900 1501 3 n, ] ;
-
-: ssn-lo ( -- )    rout DF and wout ;  \ set SSN-pin low
-: ssn-hi ( -- )    rout 20 or  wout ;  \ set SSN-pin high
-: spi-init ( -- )  ssn-hi rout 3F and wout ;  \ initialize port
-base !
 
 \ make sure the delay time values are "decimal"
 base @  decimal
@@ -58,19 +40,40 @@ base @  decimal
 base !
 
 \ connections of lcd to output port of My4TH board
-08 constant rs-bit
+80 constant si-bit
+40 constant ck-bit
+20 constant cs-bit
 10 constant bl-bit
+08 constant rs-bit
+
+\ setting or clearing a bit
+: out!   ( n -- )   dup pout !  wout ;
+: bit-hi ( mask -- )   pout @ or  out! ;
+: bit-lo ( mask -- )   invert  pout @ and  out! ;
 
 \ individual bit of display set or cleared
+: si-hi  si-bit bit-hi ;   : si-lo  si-bit bit-lo ;
+: ck-hi  ck-bit bit-hi ;   : ck-lo  ck-bit bit-lo ;
+: cs-hi  cs-bit bit-hi ;   : cs-lo  cs-bit bit-lo ;
 : rs-hi  rs-bit bit-hi ;   : rs-lo  rs-bit bit-lo ;
+
 : bl-on  bl-bit bit-lo ;   : bl-off bl-bit bit-hi ;
 
-\ sent cmd or data to lcd
+\ spi byte send - msb first, mode 3 (clk idle high)
+: spi-byte  ( byte -- )
+    8 0 do
+        dup 80 and
+        if si-hi else si-lo then
+        ck-lo
+        ck-hi
+        1 lshift
+    loop drop ;
+
 : lcd-cmd  ( byte -- )
-    rs-lo ssn-lo spi-xf drop ssn-hi ;
+    rs-lo cs-lo spi-byte cs-hi ;
 
 : lcd-data  ( byte -- )
-    rs-hi ssn-lo spi-xf drop ssn-hi ;
+    rs-hi cs-lo spi-byte cs-hi ;
 
 \ contrast word - call anytime after lcd-init
 \ contrast is 0-63 (6-bit value)
@@ -84,7 +87,7 @@ base !
 
 \ dogm163 init - 3 lines, 5v supply
 : lcd-init
-    spi-init rs-lo
+    rs-lo
     bl-on
     t200 ms
     39 lcd-cmd             \ function set: 8-bit, table 2 (3-line mode)
