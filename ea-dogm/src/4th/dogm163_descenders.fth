@@ -8,49 +8,60 @@
 \
 \ Copyright (c)2026 by Roland van Straten
 \ License: MIT
+\ 
+\ I/O Connector and PIN usage
+\
+\             GND • • GND
+\    MOSI/SO OUT7 • • IN7 SI/MISO
+\       SCLK OUT6 • • IN6
+\        SSN OUT5 • • IN5
+\  BACKLIGHT OUT4 • • IN4
+\         RS OUT3 • • IN3
+\            OUT2 • • IN2
+\            OUT1 • • IN1
+\    TRIGGER OUT0 • • IN0
+\             +5V • • RSTN
 \
 
-hex
+base @ hex
+
+\ Fast SPI transfer routine for My4TH and My4TH-nfd by D.Kuschel
+\ MISO: Input 7     MOSI: Output 7   (MSB first)
+\ SCLK: Output 6    SSN : Output 5
+
+base @ hex
+: n, 0 do , loop ;  \ helper word for inline assembler code
+
+: spi-xf ( txb -- rxb )  \ SPI transfer, send and receive 1 byte
+[ 1710 1510 A1C 60E 261C DBF 30E 261C E40 31C 261C C14 B0E B1D
+  1C0B 810 12D 4219 12 n, here 1E - , 2D3C 1900 1501 3 n, ] ;
+
+: ssn-lo ( -- )    rout DF and wout ;  \ set SSN-pin low
+: ssn-hi ( -- )    rout 20 or  wout ;  \ set SSN-pin high
+: spi-init ( -- )  ssn-hi rout 3F and wout ;  \ initialize port
+base !
+
+\ make sure the delay time values are "decimal"
+base @  decimal
+    2 constant t2
+  200 constant t200
+  500 constant t500
+base !
 
 \ connections of lcd to output port of My4TH board
-01 constant si-bit
-02 constant ck-bit
-04 constant cs-bit
 08 constant rs-bit
 10 constant bl-bit
 
-\ shadow value of byte-wise output
-variable pout
-10 pout !       \ init shadow with all 0 except backlight
-
-\ setting or clearing a bit
-: out!   ( n -- )   dup pout !  wout ;
-: bit-hi ( mask -- )   pout @ or  out! ;
-: bit-lo ( mask -- )   invert  pout @ and  out! ;
-
 \ individual bit of display set or cleared
-: si-hi  si-bit bit-hi ;   : si-lo  si-bit bit-lo ;
-: ck-hi  ck-bit bit-hi ;   : ck-lo  ck-bit bit-lo ;
-: cs-hi  cs-bit bit-hi ;   : cs-lo  cs-bit bit-lo ;
 : rs-hi  rs-bit bit-hi ;   : rs-lo  rs-bit bit-lo ;
-
 : bl-on  bl-bit bit-lo ;   : bl-off bl-bit bit-hi ;
 
-\ spi byte send - msb first, mode 3 (clk idle high)
-: spi-byte  ( byte -- )
-    8 0 do
-        dup 80 and
-        if si-hi else si-lo then
-        ck-lo
-        ck-hi
-        1 lshift
-    loop drop ;
-
+\ sent cmd or data to lcd
 : lcd-cmd  ( byte -- )
-    rs-lo cs-lo spi-byte cs-hi ;
+    rs-lo ssn-lo spi-xf drop ssn-hi ;
 
 : lcd-data  ( byte -- )
-    rs-hi cs-lo spi-byte cs-hi ;
+    rs-hi ssn-lo spi-xf drop ssn-hi ;
 
 \ contrast word - call anytime after lcd-init
 \ contrast is 0-63 (6-bit value)
@@ -59,12 +70,12 @@ variable pout
 : lcd-contrast  ( n -- )
     39 lcd-cmd                       \ function set, table 1
     dup 0f and  70 or  lcd-cmd        \ $7x = contrast low nibble c3-c0
-    0c rshift 03 and  50 or  lcd-cmd   \ $5x = booster+c5-c4
+    4 rshift 03 and  50 or  lcd-cmd   \ $5x = booster+c5-c4
     38 lcd-cmd ;                        \ function set, table 0
 
 \ dogm163 init - 3 lines, 5v supply
 : lcd-init
-    rs-lo ck-hi cs-hi si-lo
+    spi-init rs-lo
     bl-on
     200 ms
     39 lcd-cmd             \ function set: 8-bit, table 2 (3-line mode)
@@ -134,22 +145,28 @@ variable pout
         char+  
     loop  drop ;
 
+: init
+    lcd-init
+    80 lcd-contrast
+    lcd-descenders
+;
+
 \ hello world across all 3 lines
 : myhello
-    lcd-init
-    15 lcd-contrast
-    lcd-descenders
     8 0 do
         lcd-cls
+        trigger-lo 
         0 0 lcd-goto  S" Welcome"      lcd-type
         0 1 lcd-goto  S" dogm163 5v"   lcd-type
-        0 2 lcd-goto  S" My4TH rocks"  lcd-type 
+        0 2 lcd-goto  S" My4TH rocks"  lcd-type
+        trigger-hi 
         500 ms
         lcd-cls
         0 0 lcd-goto  S" the quick brown" lcd-type
         0 1 lcd-goto  S" fox jumps over"  lcd-type
         0 2 lcd-goto  S" lazy dogs back"  lcd-type 
         500 ms
-    loop drop  ;
+    loop ;
 
+init
 myhello
