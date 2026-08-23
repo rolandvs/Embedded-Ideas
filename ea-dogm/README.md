@@ -12,6 +12,15 @@ The test hardware is a custom CPU and executes native Forth code.
 
 ![my4TH](/ea-dogm/assets/img/dogm_my4TH.png)
 
+One of the bugs in the code were the millisecond delays as the base is hexedecimal 500 ms is not 500ms. So I added some constants to the code
+to make it work. Also how to figure out the current base?
+
+## 10 equals 10
+If you want to find out which base you are using `base @ .` is useless as it prints `10`. So a way to fix this is:
+
+```
+: .base  ( -- )   base @ dup decimal . base ! ; 
+```
 
 ## DOGM Display
 
@@ -38,6 +47,28 @@ The schematics were fine. However, in the latest incarnation of the program a fe
 First a bit-bang function was used to drive the display. It has been replaced by an assembly coded function implementing a SPI like function.
 
 For the purpose of timing a `trigger` output pin is defined that will be activated (low active) during writing to the screen (see `myhello` function).
+
+The measured time where the `trigger` start until it ends is `350ms`. It measures the of three strings written to the display. The debug code added were two fragments:
+
+```
+\ define a GPIO bit for the scope
+1 constant trigger-bit  \ IO PORT bit 0 used to trigger the scope
+
+: trigger-hi  trigger-bit bit-hi ;   
+: trigger-lo  trigger-bit bit-lo ;
+trigger-hi              \ set the output high
+```
+
+```
+\ insert trigger-lo/hi around the block to measure time
+trigger-lo 
+0 0 lcd-goto  S" Welcome"      lcd-type
+0 1 lcd-goto  S" dogm163 5v"   lcd-type
+0 2 lcd-goto  S" My4TH rocks"  lcd-type
+trigger-hi 
+``` 
+
+Using the SPI is roughly 5.5 times faster than the bit-bang version, which takes 1916ms to accomplish the same task.
 
 # Forth
 
