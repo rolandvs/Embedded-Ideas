@@ -3,6 +3,9 @@
 \ The display is an EA DOGM display, which come as
 \ DOGM81, DOGM162 and DOGM163
 \
+\ The code is a SPI serial version which is about 5.5x faster
+\ than the bit-bang version.
+\
 \ This code is an adaption of the dogm163.fth with custom
 \ descenders g j p q y added in CGRAM 0-4
 \
@@ -22,14 +25,20 @@
 \    TRIGGER OUT0 • • IN0
 \             +5V • • RSTN
 \
+\ A bit of fun: base @ . prints 10 either hex or decimal so how to
+\ figure out what base is active? Try this one:
+\   : .base  ( -- )   base @ dup decimal . base ! ;  
 
-base @ hex
+hex
+
+\ setting or clearing a bit
+: bit-hi ( mask -- )   rout or  wout ;
+: bit-lo ( mask -- )   invert  rout and wout ;
 
 \ Fast SPI transfer routine for My4TH and My4TH-nfd by D.Kuschel
 \ MISO: Input 7     MOSI: Output 7   (MSB first)
 \ SCLK: Output 6    SSN : Output 5
-
-base @ hex
+base @  hex
 : n, 0 do , loop ;  \ helper word for inline assembler code
 
 : spi-xf ( txb -- rxb )  \ SPI transfer, send and receive 1 byte
@@ -65,28 +74,28 @@ base !
 
 \ contrast word - call anytime after lcd-init
 \ contrast is 0-63 (6-bit value)
-\ split into: low nibble -> $70|c3-c0
-\             high 2 bits -> $50|c5-c4 (with booster off)
+\   low nibble  -> $70 | c3-c0
+\   high 2 bits -> $50 | c5-c4 (with booster off)
 : lcd-contrast  ( n -- )
     39 lcd-cmd                       \ function set, table 1
-    dup 0f and  70 or  lcd-cmd        \ $7x = contrast low nibble c3-c0
-    4 rshift 03 and  50 or  lcd-cmd   \ $5x = booster+c5-c4
+    dup  0F and  70 or  lcd-cmd       \ $7x = contrast [c3-c0]
+    04 rshift  03 and  50 or  lcd-cmd  \ $5x = booster + [c5-c4]
     38 lcd-cmd ;                        \ function set, table 0
 
 \ dogm163 init - 3 lines, 5v supply
 : lcd-init
     spi-init rs-lo
     bl-on
-    200 ms
+    t200 ms
     39 lcd-cmd             \ function set: 8-bit, table 2 (3-line mode)
-    1d lcd-cmd             \ 4-line/3-line display, bias bs=1
+    1D lcd-cmd             \ 4-line/3-line display, bias bs=1
     50 lcd-cmd             \ 
-    6c lcd-cmd             \ 
-    7c lcd-cmd             \ 
+    6C lcd-cmd             \ 
+    7C lcd-cmd             \ 
     38 lcd-cmd             \ function set: 8-bit, table 0
-    0c lcd-cmd             \ display on, cursor off, blink
+    0C lcd-cmd             \ display on, cursor off, blink
     01 lcd-cmd             \ clear display
-    2 ms
+    t2 ms
     06 lcd-cmd  ;          \ entry mode: cursor right
 
 \ position cursor: col 0-15, row 0-2
@@ -105,25 +114,25 @@ base !
 : lcd-cls
     38 lcd-cmd             \ function set: 8-bit, table 0
     01 lcd-cmd              \ clear display
-    2 ms ;
+    t2 ms ;
 
-: cg!  ( n -- )  38 lcd-cmd  8 * 40 or lcd-cmd ;
+: cg!  ( n -- )  38 lcd-cmd  8 *  40 or  lcd-cmd ;
 
-: g-desc  0 cg!  00 lcd-data 00 lcd-data 0F lcd-data 11 lcd-data
-                 11 lcd-data 0F lcd-data 01 lcd-data 0E lcd-data ;
-: j-desc  1 cg!  02 lcd-data 00 lcd-data 06 lcd-data 02 lcd-data
-                 02 lcd-data 02 lcd-data 12 lcd-data 0C lcd-data ;
-: p-desc  2 cg!  00 lcd-data 00 lcd-data 1E lcd-data 11 lcd-data
-                 11 lcd-data 1E lcd-data 10 lcd-data 10 lcd-data ;
-: q-desc  3 cg!  00 lcd-data 00 lcd-data 0F lcd-data 11 lcd-data
-                 11 lcd-data 0F lcd-data 01 lcd-data 01 lcd-data ;
-: y-desc  4 cg!  00 lcd-data 00 lcd-data 11 lcd-data 11 lcd-data 
-                 11 lcd-data 0F lcd-data 01 lcd-data 0E lcd-data ;
+: g-desc  0 cg!  00 lcd-data  00 lcd-data  0F lcd-data  11 lcd-data
+                 11 lcd-data  0F lcd-data  01 lcd-data  0E lcd-data ;
+: j-desc  1 cg!  02 lcd-data  00 lcd-data  06 lcd-data  02 lcd-data
+                 02 lcd-data  02 lcd-data  12 lcd-data  0C lcd-data ;
+: p-desc  2 cg!  00 lcd-data  00 lcd-data  1E lcd-data  11 lcd-data
+                 11 lcd-data  1E lcd-data  10 lcd-data  10 lcd-data ;
+: q-desc  3 cg!  00 lcd-data  00 lcd-data  0F lcd-data  11 lcd-data
+                 11 lcd-data  0F lcd-data  01 lcd-data  01 lcd-data ;
+: y-desc  4 cg!  00 lcd-data  00 lcd-data  11 lcd-data  11 lcd-data 
+                 11 lcd-data  0F lcd-data  01 lcd-data  0E lcd-data ;
 
 \ load all custom characters - call once after lcd-init
 \ cgram survives lcd-cls, but reload after power-off
 : lcd-descenders
-    g-desc j-desc p-desc q-desc y-desc
+    g-desc  j-desc  p-desc  q-desc  y-desc
     0 0 lcd-goto ;
 
 \ map g j p q y onto cgram codes 0-4, everything else passes
@@ -141,31 +150,29 @@ base !
 \ print string (with descenders)
 : lcd-type  ( addr len -- )
     0 do  
-        dup c@ lcd-emit  
+        dup  c@ lcd-emit  
         char+  
     loop  drop ;
 
+\ separate init function for display 
 : init
     lcd-init
-    80 lcd-contrast
-    lcd-descenders
-;
+    6 lcd-contrast
+    lcd-descenders ;
 
 \ hello world across all 3 lines
 : myhello
     8 0 do
         lcd-cls
-        trigger-lo 
         0 0 lcd-goto  S" Welcome"      lcd-type
         0 1 lcd-goto  S" dogm163 5v"   lcd-type
         0 2 lcd-goto  S" My4TH rocks"  lcd-type
-        trigger-hi 
-        500 ms
+        t500 ms
         lcd-cls
         0 0 lcd-goto  S" the quick brown" lcd-type
         0 1 lcd-goto  S" fox jumps over"  lcd-type
         0 2 lcd-goto  S" lazy dogs back"  lcd-type 
-        500 ms
+        t500 ms
     loop ;
 
 init
