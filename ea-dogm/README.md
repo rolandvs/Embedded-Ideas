@@ -19,6 +19,25 @@ The test hardware is a custom CPU and executes native Forth code.
 
 For the connection between the display and the my4TH checkout the [wiring diagram](/ea-dogm/hardware/connect_my4TH.png)
 
+### Using "SPI" 
+The schematics were fine. However, in the latest incarnation of the program a few pins moved. See connector below:
+
+| FUNC        | LABEL| PIN| PIN| LABEL| FUNC    | 
+|-------------|------|----|----|------|---------|
+|             | GND  | 20 | 19 | GND  |         |
+| MOSI/SO     | OUT7 | 18 | 17 | IN7  | SI/MISO |
+| SCLK        | OUT6 | 16 | 15 | IN6  |         |
+| SS_N        | OUT5 | 14 | 13 | IN5  |         |
+| BACKLIGHT_N | OUT4 | 12 | 11 | IN4  |         |
+| RS          | OUT3 | 10 |  9 | IN3  |         |
+|             | OUT2 |  8 |  7 | IN2  |         |
+|             | OUT1 |  6 |  5 | IN1  |         |
+| TRIGGER_N   | OUT0 |  4 |  3 | IN0  |         |
+|             | +5V  |  2 |  1 | RSTN |         |
+
+First a bit-bang function was used to drive the display. It has been replaced by an assembly coded function implementing a SPI like function.
+
+For the purpose of timing a `trigger` output pin is defined that will be activated (low active) during writing to the screen (see `myhello` function).
 
 # Forth
 
