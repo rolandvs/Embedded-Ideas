@@ -39,4 +39,6 @@ Checkout [HD44780](hd44780/descenders/README.md) and [EA-DOGM-16x](ea-dogm/READM
 
 ![VU-A](vu-meter/assets/img/VU_2x16.gif)
 
+![VU-BASIC](vu-meter-2/vu032_display.gif)
 
+This [VU-METER](vu-meter-2/) is created in BASCOM for the AVR by Ger Langezaal.
